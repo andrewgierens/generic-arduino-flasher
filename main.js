@@ -15,9 +15,7 @@ function createWindow() {
   });
 
   mainWindow.loadURL(
-    isDev
-      ? "http://localhost:1234"
-      : `file://${path.join(__dirname, "../build/index.html")}`
+    "http://google.com"
   );
   mainWindow.on("closed", () => (mainWindow = null));
 }

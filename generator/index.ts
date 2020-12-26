@@ -1,5 +1,8 @@
 var prompts = require('prompts');
 const { exec } = require('child_process');
+const packager = require('electron-packager');
+const rimraf = require('rimraf');
+const fs = require('fs-extra');
 
 (async () => {
   const questions = [
@@ -25,12 +28,51 @@ const { exec } = require('child_process');
   const response = await prompts(questions);
 
   const generateFrontEndCommand = `cross-env PROJECT_NAME="${response.PROJECT_NAME}" PROJECT_LOGO_URL="${response.PROJECT_LOGO_URL}" PROJECT_CODE_URL="${response.PROJECT_CODE_URL}" yarn build -d "output/${response.PROJECT_NAME}"`;
-  const generateElectronCommand = `yarn make`;
 
-  exec(generateFrontEndCommand, (error, _stdout, stderr) => {
+  exec(generateFrontEndCommand, async (error, _stdout, stderr) => {
     if (error) console.log('error', error);
     if (stderr) console.log('stderr', stderr);
 
-    console.log(`Complete. Your application is in the "output/${response.PROJECT_NAME}"`);
+    fs.copy('package.json', `output/${response.PROJECT_NAME}/package.json`, err => {
+      if (err) throw err;
+      console.log('package.json was copied');
+    });
+
+    fs.copy('main.js', `output/${response.PROJECT_NAME}/main.js`, err => {
+      if (err) throw err;
+      console.log('main.js was copied');
+    });
+
+    exec(`cd output/${response.PROJECT_NAME} && yarn`, (error, _stdout, stderr) => {
+      if (error) console.log('error', error);
+      if (stderr) console.log('stderr', stderr);
+      packager(
+        {
+          dir: `output/${response.PROJECT_NAME}`,
+          out: `output`,
+          executableName: response.PROJECT_NAME,
+          name: response.PROJECT_NAME,
+          overwrite: true,
+          version: '1.3.4',
+          'version-string': {
+            CompanyName: 'Andrew Gierens',
+            FileDescription: response.PROJECT_NAME,
+            OriginalFilename: response.PROJECT_NAME,
+            ProductName: response.PROJECT_NAME,
+            InternalName: response.PROJECT_NAME,
+          },
+          'app-copyright': 'Andrew Gierens',
+          'app-version': '2.1.6',
+        },
+        (err, paths) => {
+          if (err) console.log(err);
+          if (paths) console.log(paths);
+        },
+      );
+    });
+
+    // rimraf(`output/${response.PROJECT_NAME}`, {}, () => {
+    //   console.log(`Complete. ${appPaths}`);
+    // });
   });
 })();
