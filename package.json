@@ -23,7 +23,7 @@
     "generate": "ts-node ./generator/index.ts",
     "start": "concurrently \"cross-env BROWSER=none yarn ui-start\" \"wait-on http://localhost:1234 && electron . \"",
     "ui-start": "parcel ./src/index.html",
-    "build": "parcel build ./src/index.html"
+    "build": "parcel build ./src/index.html --public-url ./"
   },
   "dependencies": {
     "cross-env": "^7.0.3",
