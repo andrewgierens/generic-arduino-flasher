@@ -24,9 +24,10 @@ const { exec } = require('child_process');
 
   const response = await prompts(questions);
 
-  const generateCommand = `cross-env PROJECT_NAME=${response.PROJECT_NAME} PROJECT_LOGO_URL=${response.PROJECT_LOGO_URL} PROJECT_CODE_URL=${response.PROJECT_CODE_URL} yarn build -d "output/${response.PROJECT_NAME}"`;
+  const generateFrontEndCommand = `cross-env PROJECT_NAME="${response.PROJECT_NAME}" PROJECT_LOGO_URL="${response.PROJECT_LOGO_URL}" PROJECT_CODE_URL="${response.PROJECT_CODE_URL}" yarn build -d "output/${response.PROJECT_NAME}"`;
+  const generateElectronCommand = `yarn make`;
 
-  exec(generateCommand, (error, _stdout, stderr) => {
+  exec(generateFrontEndCommand, (error, _stdout, stderr) => {
     if (error) console.log('error', error);
     if (stderr) console.log('stderr', stderr);
 
