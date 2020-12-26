@@ -4,7 +4,7 @@ const packager = require('electron-packager');
 const rimraf = require('rimraf');
 const fs = require('fs-extra');
 
-(async () => {
+const askQuestions = async () => {
   const questions = [
     {
       type: 'text',
@@ -25,54 +25,97 @@ const fs = require('fs-extra');
     },
   ];
 
-  const response = await prompts(questions);
+  return await prompts(questions);
+};
 
-  const generateFrontEndCommand = `cross-env PROJECT_NAME="${response.PROJECT_NAME}" PROJECT_LOGO_URL="${response.PROJECT_LOGO_URL}" PROJECT_CODE_URL="${response.PROJECT_CODE_URL}" yarn build -d "output/${response.PROJECT_NAME}"`;
+const buildFrontEnd = async questionResponse => {
+  return new Promise((resolve, reject) => {
+    const generateFrontEndCommand = `cross-env PROJECT_NAME="${questionResponse.PROJECT_NAME}" PROJECT_LOGO_URL="${questionResponse.PROJECT_LOGO_URL}" PROJECT_CODE_URL="${questionResponse.PROJECT_CODE_URL}" yarn build -d "output/${questionResponse.PROJECT_NAME}"`;
 
-  exec(generateFrontEndCommand, async (error, _stdout, stderr) => {
-    if (error) console.log('error', error);
-    if (stderr) console.log('stderr', stderr);
-
-    fs.copy('package.json', `output/${response.PROJECT_NAME}/package.json`, err => {
-      if (err) throw err;
-      console.log('package.json was copied');
+    exec(generateFrontEndCommand, err => {
+      if (err) reject(err);
+      if (!err) resolve({});
     });
-
-    fs.copy('main.js', `output/${response.PROJECT_NAME}/main.js`, err => {
-      if (err) throw err;
-      console.log('main.js was copied');
-    });
-
-    exec(`cd output/${response.PROJECT_NAME} && yarn`, (error, _stdout, stderr) => {
-      if (error) console.log('error', error);
-      if (stderr) console.log('stderr', stderr);
-      packager(
-        {
-          dir: `output/${response.PROJECT_NAME}`,
-          out: `output`,
-          executableName: response.PROJECT_NAME,
-          name: response.PROJECT_NAME,
-          overwrite: true,
-          version: '1.3.4',
-          'version-string': {
-            CompanyName: 'Andrew Gierens',
-            FileDescription: response.PROJECT_NAME,
-            OriginalFilename: response.PROJECT_NAME,
-            ProductName: response.PROJECT_NAME,
-            InternalName: response.PROJECT_NAME,
-          },
-          'app-copyright': 'Andrew Gierens',
-          'app-version': '2.1.6',
-        },
-        (err, paths) => {
-          if (err) console.log(err);
-          if (paths) console.log(paths);
-        },
-      );
-    });
-
-    // rimraf(`output/${response.PROJECT_NAME}`, {}, () => {
-    //   console.log(`Complete. ${appPaths}`);
-    // });
   });
+};
+
+const copyFilesForElectron = async questionResponse => {
+  return new Promise((resolve, reject) => {
+    fs.copy('package.json', `output/${questionResponse.PROJECT_NAME}/package.json`, err => {
+      if (err) reject(err);
+    });
+
+    fs.copy('main.js', `output/${questionResponse.PROJECT_NAME}/main.js`, err => {
+      if (err) reject(err);
+      if (!err) resolve({});
+    });
+  });
+};
+
+const executeYarn = async questionResponse => {
+  return new Promise((resolve, reject) => {
+    const generateYarnCommand = `cd output/${questionResponse.PROJECT_NAME} && yarn`;
+
+    exec(generateYarnCommand, err => {
+      if (err) reject(err);
+      if (!err) resolve({});
+    });
+  });
+};
+
+(async () => {
+  let questionquestionResponse: { PROJECT_NAME: string } = { PROJECT_NAME: '' };
+  try {
+    questionquestionResponse = await askQuestions();
+  } catch (err) {
+    console.log('Failed to fetch questions: ', err);
+    return;
+  }
+
+  try {
+    console.log('Building frontend...');
+    await buildFrontEnd(questionquestionResponse);
+  } catch (err) {
+    console.log('Failed to build frontend: ', err);
+    return;
+  }
+
+  try {
+    console.log('Copying electron files...');
+    await copyFilesForElectron(questionquestionResponse);
+  } catch (err) {
+    console.log('Failed to copy files: ', err);
+    return;
+  }
+
+  try {
+    console.log('Installing packages...');
+    await executeYarn(questionquestionResponse);
+  } catch (err) {
+    console.log('Failed to install packages: ', err);
+    return;
+  }
+
+  console.log('Packaging...');
+  packager(
+    {
+      dir: `output/${questionquestionResponse.PROJECT_NAME}`,
+      out: `output`,
+      executableName: questionquestionResponse.PROJECT_NAME,
+      name: questionquestionResponse.PROJECT_NAME,
+      overwrite: true,
+      'version-string': {
+        CompanyName: 'Andrew Gierens',
+        FileDescription: questionquestionResponse.PROJECT_NAME,
+        OriginalFilename: questionquestionResponse.PROJECT_NAME,
+        ProductName: questionquestionResponse.PROJECT_NAME,
+        InternalName: questionquestionResponse.PROJECT_NAME,
+      },
+      'app-copyright': 'Andrew Gierens',
+    },
+    (err, paths) => {
+      if (err) console.log(err);
+      if (paths) console.log(paths);
+    },
+  );
 })();
